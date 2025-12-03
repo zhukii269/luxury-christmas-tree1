@@ -45,7 +45,7 @@ export const Polaroids = () => {
     const { progress } = useStore()
     const groupRef = useRef<THREE.Group>(null!)
     const stringMeshRef = useRef<THREE.Mesh>(null!)
-    const prevProgress = useRef(-1)
+
 
     // Pre-calculate layouts
     const layoutData = useMemo(() => {
@@ -118,24 +118,21 @@ export const Polaroids = () => {
     useFrame((state) => {
         if (!groupRef.current) return
 
-        // Only update if progress has changed significantly
-        if (Math.abs(progress - prevProgress.current) < 0.0001) {
-            groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1
-            return
-        }
-        prevProgress.current = progress
+        // Floating animation
+        groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1
 
-        // Interpolate between layouts based on progress
         const t = progress
 
-        // Update each photo
-        groupRef.current.children.forEach((child, i) => {
+        // 1. Update Photo Meshes (View)
+        let photoIndex = 0
+        groupRef.current.children.forEach((child) => {
             if (child === stringMeshRef.current) return
-            if (i >= layoutData.spiral.length) return
+            if (photoIndex >= layoutData.spiral.length) return
 
-            const s = layoutData.spiral[i]
-            const l = layoutData.linear[i]
+            const s = layoutData.spiral[photoIndex]
+            const l = layoutData.linear[photoIndex]
 
+            // Interpolate transform
             child.position.lerpVectors(l.pos, s.pos, t)
             child.rotation.x = THREE.MathUtils.lerp(l.rot.x, s.rot.x, t)
             child.rotation.y = THREE.MathUtils.lerp(l.rot.y, s.rot.y, t)
@@ -143,36 +140,45 @@ export const Polaroids = () => {
 
             const currentScale = THREE.MathUtils.lerp(l.scale, s.scale, t)
             child.scale.setScalar(currentScale)
+
+            photoIndex++
         })
 
-        // Update String with Safety Checks
-        if (stringMeshRef.current && groupRef.current) {
+        // 2. Update String (Data-Driven)
+        if (stringMeshRef.current) {
             const points: THREE.Vector3[] = []
-            // Filter only PolaroidFrame children (exclude string mesh)
-            const polaroids = groupRef.current.children.filter(child => child !== stringMeshRef.current)
 
-            // Only generate string if we have enough polaroids mounted
-            if (polaroids.length > 0) {
-                for (let i = 0; i < polaroids.length; i++) {
-                    const child = polaroids[i]
-                    if (!child) continue
+            for (let i = 0; i < layoutData.spiral.length; i++) {
+                const s = layoutData.spiral[i]
+                const l = layoutData.linear[i]
 
-                    const currentScale = child.scale.x
-                    const offset = new THREE.Vector3(0, 0.65 * currentScale, 0)
-                    offset.applyEuler(child.rotation)
-                    offset.add(child.position)
-                    points.push(offset)
-                }
+                // Calculate where the photo SHOULD be
+                const pos = new THREE.Vector3().lerpVectors(l.pos, s.pos, t)
 
-                if (points.length > 1) {
-                    const curve = new THREE.CatmullRomCurve3(points)
-                    if (stringMeshRef.current.geometry) stringMeshRef.current.geometry.dispose()
-                    stringMeshRef.current.geometry = new THREE.TubeGeometry(curve, 64, 0.02, 8, false)
-                }
+                // Calculate rotation
+                const rot = new THREE.Euler(
+                    THREE.MathUtils.lerp(l.rot.x, s.rot.x, t),
+                    THREE.MathUtils.lerp(l.rot.y, s.rot.y, t),
+                    THREE.MathUtils.lerp(l.rot.z, s.rot.z, t)
+                )
+
+                // Calculate scale
+                const scale = THREE.MathUtils.lerp(l.scale, s.scale, t)
+
+                // Calculate attachment point (top of the photo)
+                const offset = new THREE.Vector3(0, 0.65 * scale, 0)
+                offset.applyEuler(rot)
+                offset.add(pos)
+
+                points.push(offset)
+            }
+
+            if (points.length > 1) {
+                const curve = new THREE.CatmullRomCurve3(points)
+                if (stringMeshRef.current.geometry) stringMeshRef.current.geometry.dispose()
+                stringMeshRef.current.geometry = new THREE.TubeGeometry(curve, 64, 0.02, 8, false)
             }
         }
-
-        groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1
     })
 
     return (
