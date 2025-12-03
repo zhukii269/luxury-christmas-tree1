@@ -6,7 +6,8 @@ import { useStore } from '../../store/useStore'
 
 const PolaroidFrame = ({ position, rotation, scale, index }: any) => {
     // Load texture based on index (1-14 repeating)
-    const textureUrl = `/photos/${(index % 14) + 1}.jpg`
+    // Use BASE_URL for correct path in production (GitHub Pages)
+    const textureUrl = `${import.meta.env.BASE_URL}photos/${(index % 14) + 1}.jpg`
 
     // useTexture will suspend if loading, handled by Suspense parent
     const texture = useTexture(textureUrl)

@@ -1,4 +1,4 @@
-import { PerspectiveCamera, Environment } from '@react-three/drei'
+import { PerspectiveCamera } from '@react-three/drei'
 import { Foliage } from './Foliage'
 import { Ornaments } from './Ornaments'
 import { Star } from './Star'
@@ -36,7 +36,8 @@ export const Scene = () => {
             />
 
             {/* City preset offers warmer, more complex reflections than lobby */}
-            <Environment preset="city" />
+            {/* REMOVED: Causing network timeout on GitHub Pages (raw.githack.com blocked) */}
+            {/* <Environment preset="city" /> */}
 
             <Foliage />
             <Ornaments />
