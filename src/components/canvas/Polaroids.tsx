@@ -45,7 +45,7 @@ export const Polaroids = () => {
     const { progress } = useStore()
     const groupRef = useRef<THREE.Group>(null!)
     const stringMeshRef = useRef<THREE.Mesh>(null!)
-    const prevProgress = useRef(-1)
+
 
     // Pre-calculate layouts
     const layoutData = useMemo(() => {
