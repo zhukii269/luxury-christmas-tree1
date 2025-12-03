@@ -124,7 +124,7 @@ export const Gifts = () => {
         return gifts
     }, [])
 
-    useFrame((state) => {
+    useFrame(() => {
         if (!groupRef.current) return
 
         // Scale in based on progress
