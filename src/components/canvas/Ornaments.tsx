@@ -3,7 +3,7 @@ import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../store/useStore'
-import { generateChaosPositions, calculateTreeSurfacePositions } from '../../utils/DualPositionUtils'
+import { generateChaosPositions, calculateUniformConePositions, calculateTreeSurfacePositions } from '../../utils/DualPositionUtils'
 
 const OrnamentType = {
     GIFT: { count: 12, color: '#B8860B', scale: 0.7, radiusScale: 1.0 }, // Dark Gold, Fewer, Slightly Smaller
@@ -23,24 +23,62 @@ export const Ornaments = () => {
 
     // Data generation
     const [giftData, orbGlossData, orbMatteData, lightData, dustData] = useMemo(() => {
-        // Helper to generate data for a type
-        const gen = (type: typeof OrnamentType.GIFT) => {
+        // 1. Handle Large Ornaments (Gifts, Orbs) - Uniform Distribution
+        const largeTypes = [OrnamentType.GIFT, OrnamentType.ORB_GLOSS, OrnamentType.ORB_MATTE]
+        const totalLargeCount = largeTypes.reduce((sum, t) => sum + t.count, 0)
+
+        // Generate uniform positions for ALL large items together
+        // Using radius 5 and height 12 based on previous logic
+        const allLargePositions = calculateUniformConePositions(totalLargeCount, 5, 12)
+
+        // Shuffle the positions to randomize which type goes where
+        // We shuffle indices to keep x,y,z triplets together
+        const indices = Array.from({ length: totalLargeCount }, (_, i) => i)
+        for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+
+        const shuffledPositions = new Float32Array(totalLargeCount * 3)
+        for (let i = 0; i < totalLargeCount; i++) {
+            const srcIdx = indices[i]
+            shuffledPositions[i * 3] = allLargePositions[srcIdx * 3]
+            shuffledPositions[i * 3 + 1] = allLargePositions[srcIdx * 3 + 1]
+            shuffledPositions[i * 3 + 2] = allLargePositions[srcIdx * 3 + 2]
+        }
+
+        let offset = 0
+        const genLarge = (type: typeof OrnamentType.GIFT) => {
+            const count = type.count
+            // Extract slice of positions
+            const target = shuffledPositions.slice(offset * 3, (offset + count) * 3)
+            offset += count
+
+            const chaos = generateChaosPositions(count, 15, 20)
+
+            const randomScales = new Float32Array(count)
+            for (let i = 0; i < count; i++) randomScales[i] = 0.5 + Math.random() * 1.0
+
+            return { chaos, target, randomScales }
+        }
+
+        // 2. Handle Small Items (Lights, Dust) - Random/Spiral Distribution
+        const genSmall = (type: typeof OrnamentType.LIGHT) => {
             const { count, radiusScale } = type
             const chaos = generateChaosPositions(count, 15, 20)
-            // Apply radius scale to target positions
             const target = calculateTreeSurfacePositions(count, 5 * radiusScale, 12)
 
-            // Generate random scales for variance (0.5x to 1.5x base scale)
             const randomScales = new Float32Array(count)
             for (let i = 0; i < count; i++) randomScales[i] = 0.5 + Math.random() * 1.0
             return { chaos, target, randomScales }
         }
+
         return [
-            gen(OrnamentType.GIFT),
-            gen(OrnamentType.ORB_GLOSS),
-            gen(OrnamentType.ORB_MATTE),
-            gen(OrnamentType.LIGHT),
-            gen(OrnamentType.DUST)
+            genLarge(OrnamentType.GIFT),
+            genLarge(OrnamentType.ORB_GLOSS),
+            genLarge(OrnamentType.ORB_MATTE),
+            genSmall(OrnamentType.LIGHT),
+            genSmall(OrnamentType.DUST)
         ]
     }, [])
 

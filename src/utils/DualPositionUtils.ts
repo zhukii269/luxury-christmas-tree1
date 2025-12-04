@@ -101,3 +101,34 @@ export const calculateTreeSurfacePositions = (count: number, baseRadius: number,
     }
     return positions
 }
+
+/**
+ * Generates uniform positions on the surface of the cone using Golden Spiral.
+ * Guarantees no clumping.
+ */
+export const calculateUniformConePositions = (count: number, baseRadius: number, height: number): Float32Array => {
+    const positions = new Float32Array(count * 3)
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5))
+
+    for (let i = 0; i < count; i++) {
+        // Normalized distance from apex (0 to 1)
+        // Using sqrt to ensure uniform area distribution
+        const t = (i + 0.5) / count
+        const distance = Math.sqrt(t)
+
+        // Height from base (0 is base, height is top)
+        // We want to avoid the very top (star) and very bottom (floor)
+        // Let's use 5% to 90% of height
+        const effectiveHeight = height * 0.85
+        const h = effectiveHeight * (1 - distance) + (height * 0.05)
+
+        const r = baseRadius * (1 - h / height)
+
+        const theta = i * goldenAngle
+
+        positions[i * 3] = r * Math.cos(theta)
+        positions[i * 3 + 1] = h - height / 2
+        positions[i * 3 + 2] = r * Math.sin(theta)
+    }
+    return positions
+}
