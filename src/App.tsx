@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { Scene } from './components/canvas/Scene'
 import { Loader } from '@react-three/drei'
 import { Overlay } from './components/Overlay'
+import { MusicPlayer } from './components/MusicPlayer'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
       </Canvas>
       <Loader />
       <Overlay />
+      <MusicPlayer />
     </>
   )
 }
